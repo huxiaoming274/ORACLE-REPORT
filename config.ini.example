@@ -1,0 +1,7 @@
+[database]
+user = YOUR_DB_USERNAME
+password = YOUR_ENCRYPTED_PASSWORD
+dsn = HOST:PORT/SERVICE_NAME
+
+[output]
+output_file = output.xlsx

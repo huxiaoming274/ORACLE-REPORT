@@ -1,0 +1,33 @@
+# Compiled / build output
+build/
+dist/
+
+# IDE files
+.idea/
+
+# Sensitive config (copy config.ini.example to config.ini and fill in your credentials)
+config.ini
+secret.key
+
+# Data / output files
+*.xlsx
+*.xls
+export_data
+result*.xlsx
+
+# Logs
+log/
+*.log
+*.txt
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Temp files
+*.~sql
+*.tmp
