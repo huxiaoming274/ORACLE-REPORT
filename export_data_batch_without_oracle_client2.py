@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import oracledb  # 使用 oracledb 的 Thin 模式
 import pandas as pd
@@ -6,6 +7,17 @@ import configparser
 from cryptography.fernet import Fernet
 import logging
 from datetime import datetime
+
+# openpyxl 不允许写入 XML 控制字符（\x00-\x08, \x0b, \x0c, \x0e-\x1f）
+ILLEGAL_CHARS_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
+
+def sanitize_dataframe(df):
+    """清除 DataFrame 字符串列中 Excel 不允许的控制字符"""
+    def clean(val):
+        if isinstance(val, str):
+            return ILLEGAL_CHARS_RE.sub('', val)
+        return val
+    return df.map(clean)
 
 # 配置 oracledb 使用 Thin 模式
 oracledb.init_oracle_client(lib_dir=None)  # Thin 模式下无需指定 lib_dir
@@ -114,6 +126,7 @@ def export_to_excel(sql_file, output_file):
             for i, (sheet_name, query) in enumerate(queries):
                 logging.info(f"Executing query: {query}")
                 df = pd.read_sql(query, con=connection)
+                df = sanitize_dataframe(df)
                 sheet_name = sheet_name if sheet_name else f"Sheet{i+1}"
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
                 logging.info(f"Query result written to sheet: {sheet_name}")
