@@ -12,19 +12,21 @@ from datetime import datetime
 ILLEGAL_CHARS_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
 
 def sanitize_dataframe(df, sheet_name=""):
-    """清除 DataFrame 字符串列中 Excel 不允许的控制字符，并记录发现的非法字符"""
-    def clean(val):
-        if isinstance(val, str):
-            found = ILLEGAL_CHARS_RE.findall(val)
-            if found:
-                hex_chars = [f"\\x{ord(c):02x}" for c in found]
-                logging.warning(
-                    f"[sheet={sheet_name}] 发现非法字符 {hex_chars}，"
-                    f"原始值（前100字符）: {repr(val[:100])}"
-                )
-                return ILLEGAL_CHARS_RE.sub('', val)
-        return val
-    return df.map(clean)
+    """清除 DataFrame 字符串列中 Excel 不允许的控制字符，并记录发现的非法字符（含列名和行号）"""
+    for col in df.columns:
+        if df[col].dtype == object:
+            for idx, val in df[col].items():
+                if isinstance(val, str):
+                    found = ILLEGAL_CHARS_RE.findall(val)
+                    if found:
+                        hex_chars = [f"\\x{ord(c):02x}" for c in found]
+                        logging.warning(
+                            f"[sheet={sheet_name}] 非法字符 {hex_chars} | "
+                            f"列={col} | 行号(0-based)={idx} | "
+                            f"原始值（前100字符）: {repr(val[:100])}"
+                        )
+                        df.at[idx, col] = ILLEGAL_CHARS_RE.sub('', val)
+    return df
 
 # 配置 oracledb 使用 Thin 模式
 oracledb.init_oracle_client(lib_dir=None)  # Thin 模式下无需指定 lib_dir
