@@ -11,11 +11,18 @@ from datetime import datetime
 # openpyxl 不允许写入 XML 控制字符（\x00-\x08, \x0b, \x0c, \x0e-\x1f）
 ILLEGAL_CHARS_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f]')
 
-def sanitize_dataframe(df):
-    """清除 DataFrame 字符串列中 Excel 不允许的控制字符"""
+def sanitize_dataframe(df, sheet_name=""):
+    """清除 DataFrame 字符串列中 Excel 不允许的控制字符，并记录发现的非法字符"""
     def clean(val):
         if isinstance(val, str):
-            return ILLEGAL_CHARS_RE.sub('', val)
+            found = ILLEGAL_CHARS_RE.findall(val)
+            if found:
+                hex_chars = [f"\\x{ord(c):02x}" for c in found]
+                logging.warning(
+                    f"[sheet={sheet_name}] 发现非法字符 {hex_chars}，"
+                    f"原始值（前100字符）: {repr(val[:100])}"
+                )
+                return ILLEGAL_CHARS_RE.sub('', val)
         return val
     return df.map(clean)
 
@@ -126,8 +133,8 @@ def export_to_excel(sql_file, output_file):
             for i, (sheet_name, query) in enumerate(queries):
                 logging.info(f"Executing query: {query}")
                 df = pd.read_sql(query, con=connection)
-                df = sanitize_dataframe(df)
                 sheet_name = sheet_name if sheet_name else f"Sheet{i+1}"
+                df = sanitize_dataframe(df, sheet_name)
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
                 logging.info(f"Query result written to sheet: {sheet_name}")
         logging.info(f"Data exported successfully to {output_file}")
